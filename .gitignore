@@ -1,3 +1,11 @@
+# database
+data/*.db
+
+# IDE and system files
 .idea
 .vscode
 .DS_Store
+
+# python files
+__pycache__/
+debug.py
