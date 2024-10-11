@@ -8,7 +8,8 @@ from datetime import datetime
 
 import rate
 
-from database import get_recent_transactions, get_monthly_expenses
+from database import get_recent_transactions, get_monthly_expenses, get_expense_since_last_tenth
+from utils import *
 
 # Ensure /data folder exists
 if not os.path.exists('./data'):
@@ -33,36 +34,6 @@ def create_transaction_db():
     ''')
     conn.commit()
     conn.close()
-
-
-def parse_transaction(text):
-    """
-    Parse transactions from text.
-
-    Returns a list of dictionaries containing transaction data.
-    """
-    pattern = r'(\d{4}年\d{2}月\d{2}日).+?在(.+?)(消费|预授权)USD([0-9.]+)元'
-    matches = re.findall(pattern, text)
-    
-    transactions = []
-    for match in matches:
-        date = match[0].replace('年', '-').replace('月', '-').replace('日', '')
-        merchant = match[1].strip()
-        verb = match[2].strip()
-        amount = float(match[3])
-
-        if verb not in ['消费', '预授权']:
-            raise ValueError(f"Unrecognized verb: {verb} in transaction text.")
-
-        transactions.append({
-            'date': date,
-            'merchant': merchant,
-            'amount': amount,
-            'type': 'pre-authorization' if verb == '预授权' else 'consumption',
-            'category': ''
-        })
-    
-    return transactions
 
 
 def insert_transactions(transactions):
@@ -103,6 +74,7 @@ def manual_input():
     if text_data:
         process_input(text_data)
         messagebox.showinfo("Success", "Transactions inputted and stored in the database!")
+        update_display()
 
 
 def categorize_transactions():
@@ -133,7 +105,7 @@ def toggle_currency():
 # Function to update the display based on the selected currency
 def update_display():
     recent_transactions = get_recent_transactions()
-    monthly_expenses = get_monthly_expenses()
+    monthly_expenses = get_expense_since_last_tenth()
 
     # Get the latest exchange rate
     exchange_rate = rate.get_last_exchange_rate()['rate']
@@ -219,7 +191,7 @@ def check_for_db_changes():
 
 
 def update_budget_bar(progress_bar, spent_label):
-    total_spent = get_monthly_expenses()
+    total_spent = get_expense_since_last_tenth()
 
     # Calculate the percentage of the budget used
     budget_used_percentage = (total_spent / budget) * 100
@@ -250,6 +222,6 @@ if __name__ == '__main__':
 
     # Call the update display function initially to show data
     update_display()
-    root.after(500, check_for_db_changes)  # Start polling after 5 seconds
+    # root.after(500, check_for_db_changes)  # Start polling after 5 seconds
 
     root.mainloop()
